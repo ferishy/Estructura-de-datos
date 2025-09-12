@@ -41,7 +41,6 @@ for i in range(9):
         print(f"¡{turno_jugador} ha ganado!")
         break
 
-    # Cambiar turno
     if simbolo == 'X':
         simbolo = 'O'
         turno_jugador = jugador2
