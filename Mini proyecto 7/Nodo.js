@@ -1,12 +1,12 @@
-class Nodo {
-    constructor(id, nombre, tipo, contenido = null) {
-        this.id = id;                  // número identificador
-        this.nombre = nombre;          // nombre del nodo
-        this.tipo = tipo;              // "carpeta" | "archivo"
-        this.contenido = contenido;    // contenido si es archivo
-        this.hijos = [];               // lista de hijos
-        this.padre = null;             // referencia al padre
+class Node {
+    constructor(id, nombre, tipo, contenido = "", parent = null) {
+        this.id = id;
+        this.nombre = nombre;
+        this.tipo = tipo; 
+        this.contenido = contenido;
+        this.children = [];
+        this.parent = parent;
     }
 }
 
-module.exports = Nodo;
+module.exports = Node;

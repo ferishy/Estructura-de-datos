@@ -1,144 +1,58 @@
-const Nodo = require("./Nodo");
-const fs = require("fs");
-
 class Arbol {
     constructor() {
-        this.raiz = new Nodo(0, "root", "carpeta");
-        this.siguienteId = 1;
-
-        // mapa para búsqueda exacta
-        this.mapaNombres = new Map();
-
-        this.indexarNodo(this.raiz);
+        this.root = new Node(0, "/", "carpeta");
+        this.lastId = 0;
     }
 
-    // -------------------- UTILIDADES --------------------
-
-    indexarNodo(nodo) {
-        if (!this.mapaNombres.has(nodo.nombre)) {
-            this.mapaNombres.set(nodo.nombre, []);
-        }
-        this.mapaNombres.get(nodo.nombre).push(nodo);
-
-        nodo.hijos.forEach(h => this.indexarNodo(h));
-    }
-
-    limpiarMapa() {
-        this.mapaNombres = new Map();
+    generarId() {
+        this.lastId++;
+        return this.lastId;
     }
 
     buscarPorRuta(ruta) {
-        if (ruta === "/" || ruta === "") return this.raiz;
+        if (ruta === "/") return this.root;
 
-        const partes = ruta.split("/").filter(Boolean);
+        const partes = ruta.split("/").filter(x => x !== "");
+        let actual = this.root;
 
-        let actual = this.raiz;
-
-        for (const p of partes) {
-            const hijo = actual.hijos.find(c => c.nombre === p);
-            if (!hijo) return null;
-            actual = hijo;
+        for (const nombre of partes) {
+            const encontrado = actual.children.find(h => h.nombre === nombre);
+            if (!encontrado) return null;
+            actual = encontrado;
         }
-
         return actual;
     }
 
-    // -------------------- OPERACIONES MVP --------------------
-
     insertar(rutaPadre, nombre, tipo, contenido = "") {
         const padre = this.buscarPorRuta(rutaPadre);
-        if (!padre || padre.tipo !== "carpeta") return false;
+        if (!padre) return null;
 
-        // evitar duplicados
-        if (padre.hijos.some(c => c.nombre === nombre)) return false;
-
-        const nodo = new Nodo(this.siguienteId++, nombre, tipo, contenido);
-        nodo.padre = padre;
-        padre.hijos.push(nodo);
-
-        if (!this.mapaNombres.has(nombre)) {
-            this.mapaNombres.set(nombre, []);
-        }
-        this.mapaNombres.get(nombre).push(nodo);
-
-        return true;
+        const nuevo = new Node(this.generarId(), nombre, tipo, contenido, padre);
+        padre.children.push(nuevo);
+        return nuevo;
     }
 
     listarHijos(ruta) {
         const nodo = this.buscarPorRuta(ruta);
-        return nodo ? nodo.hijos : [];
+        if (!nodo) return null;
+        return nodo.children.map(h => h.nombre);
     }
 
-    rutaCompleta(nodo) {
-        const partes = [];
+    obtenerRutaCompleta(nodo) {
         let actual = nodo;
-
-        while (actual && actual.id !== 0) {
+        const partes = [];
+        while (actual.parent) {
             partes.push(actual.nombre);
-            actual = actual.padre;
+            actual = actual.parent;
         }
-
         return "/" + partes.reverse().join("/");
     }
 
-    exportarPreorden(nodo = this.raiz, nivel = 0) {
-        const prefijo = "  ".repeat(nivel);
-        console.log(
-            `${prefijo}${nodo.tipo === "carpeta" ? "[Carpeta]" : "[Archivo]"} ${nodo.nombre}`
-        );
-
-        nodo.hijos.forEach(h => this.exportarPreorden(h, nivel + 1));
-    }
-
-    // -------------------- JSON --------------------
-
-    guardarJSON(rutaArchivo) {
-        const objeto = { raiz: this.nodoAObjeto(this.raiz) };
-        fs.writeFileSync(rutaArchivo, JSON.stringify(objeto, null, 2));
-        return true;
-    }
-
-    nodoAObjeto(n) {
-        return {
-            id: n.id,
-            nombre: n.nombre,
-            tipo: n.tipo,
-            contenido: n.contenido,
-            hijos: n.hijos.map(h => this.nodoAObjeto(h))
-        };
-    }
-
-    cargarJSON(rutaArchivo) {
-        const datos = fs.readFileSync(rutaArchivo, "utf8");
-        const obj = JSON.parse(datos);
-
-        this.raiz = this.objetoANodo(obj.raiz);
-        this.limpiarMapa();
-        this.indexarNodo(this.raiz);
-
-        // actualizar siguienteId
-        let max = 0;
-        for (const lista of this.mapaNombres.values()) {
-            for (const nodo of lista) {
-                max = Math.max(max, nodo.id);
-            }
+    preorden(nodo = this.root, resultado = []) {
+        resultado.push(nodo.nombre);
+        for (const h of nodo.children) {
+            this.preorden(h, resultado);
         }
-        this.siguienteId = max + 1;
-
-        return true;
-    }
-
-    objetoANodo(o, padre = null) {
-        const nodo = new Nodo(o.id, o.nombre, o.tipo, o.contenido);
-        nodo.padre = padre;
-
-        o.hijos.forEach(h => {
-            const hijo = this.objetoANodo(h, nodo);
-            nodo.hijos.push(hijo);
-        });
-
-        return nodo;
+        return resultado;
     }
 }
-
-module.exports = Arbol;
