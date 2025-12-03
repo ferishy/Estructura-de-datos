@@ -1,0 +1,27 @@
+{
+  "proyecto": "mini-suite-arboles",
+  "ultima_id": 4,
+  "root": {
+    "id": 0,
+    "nombre": "/",
+    "tipo": "carpeta",
+    "contenido": "",
+    "children": [
+      {
+        "id": 1,
+        "nombre": "Documentos",
+        "tipo": "carpeta",
+        "contenido": "",
+        "children": [
+          {
+            "id": 2,
+            "nombre": "notas.txt",
+            "tipo": "archivo",
+            "contenido": "contenido de ejemplo",
+            "children": []
+          }
+        ]
+      }
+    ]
+  }
+}
