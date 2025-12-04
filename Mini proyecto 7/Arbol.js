@@ -84,10 +84,8 @@ class Arbol {
         if (!nodo || !destino) return false;
         if (nodo === this.root) return false;
 
-        // quitar del padre original
         nodo.parent.children = nodo.parent.children.filter(h => h !== nodo);
-
-        // agregar al nuevo padre
+        
         nodo.parent = destino;
         destino.children.push(nodo);
 
@@ -104,6 +102,45 @@ class Arbol {
     altura(nodo = this.root) {
         if (nodo.children.length === 0) return 0;
         return 1 + Math.max(...nodo.children.map(h => this.altura(h)));
+    }
+
+    guardarJSON(rutaArchivo) {
+        const data = {
+            proyecto: "mini-suite-arboles",
+            ultima_id: this.lastId,
+            root: this._nodoToJSON(this.root)
+        };
+
+        fs.writeFileSync(rutaArchivo, JSON.stringify(data, null, 2));
+    }
+
+    _nodoToJSON(nodo) {
+        return {
+            id: nodo.id,
+            nombre: nodo.nombre,
+            tipo: nodo.tipo,
+            contenido: nodo.contenido,
+            children: nodo.children.map(hijo => this._nodoToJSON(hijo))
+        };
+    }
+
+    cargarJSON(rutaArchivo) {
+        const raw = fs.readFileSync(rutaArchivo);
+        const data = JSON.parse(raw);
+
+        this.lastId = data.ultima_id;
+
+        this.root = this._jsonToNodo(data.root, null);
+    }
+
+    _jsonToNodo(obj, parent) {
+        const nodo = new Node(obj.id, obj.nombre, obj.tipo, obj.contenido, parent);
+
+        nodo.children = obj.children.map(h =>
+            this._jsonToNodo(h, nodo)
+        );
+
+        return nodo;
     }
 }
 
