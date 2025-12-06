@@ -11,6 +11,43 @@ class Arbol {
         return this.lastId;
     }
 
+    _agregarAIndices(nodo) {
+        if (!this.hash.has(nodo.nombre))
+            this.hash.set(nodo.nombre, []);
+        this.hash.get(nodo.nombre).push(nodo);
+
+        this.trie.insertar(nodo.nombre, nodo);
+    }
+
+    _removerDeIndices(nodo) {
+        if (this.hash.has(nodo.nombre)) {
+            this.hash.set(
+                nodo.nombre,
+                this.hash.get(nodo.nombre).filter(n => n !== nodo)
+            );
+            if (this.hash.get(nodo.nombre).length === 0)
+                this.hash.delete(nodo.nombre);
+        }
+
+        this.trie.eliminar(nodo.nombre, nodo);
+    }
+
+    _actualizarNombreIndices(nodo, viejoNombre, nuevoNombre) {
+        if (this.hash.has(viejoNombre)) {
+            this.hash.set(
+                viejoNombre,
+                this.hash.get(viejoNombre).filter(n => n !== nodo)
+            );
+        }
+        this.trie.eliminar(viejoNombre, nodo);
+
+        if (!this.hash.has(nuevoNombre))
+            this.hash.set(nuevoNombre, []);
+        this.hash.get(nuevoNombre).push(nodo);
+
+        this.trie.insertar(nuevoNombre, nodo);
+    }
+
     buscarPorRuta(ruta) {
         if (ruta === "/") return this.root;
 
