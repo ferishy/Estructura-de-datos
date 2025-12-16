@@ -6,7 +6,11 @@ class Program
 
     static void Main()
     {
-        // Inicializar tablero
+        Console.Write("Nombre del jugador 1 (X): ");
+        string nombre1 = Console.ReadLine();
+        Console.Write("Nombre del jugador 2 (O): ");
+        string nombre2 = Console.ReadLine();
+
         for (int i = 0; i < 6; i++)
         {
             for (int j = 0; j < 7; j++)
@@ -15,12 +19,14 @@ class Program
             }
         }
 
-        char jugador = 'X';
+        Random rnd = new Random();
+        int turno = rnd.Next(0, 2); // 0 o 1
+        char fichaActual = turno == 0 ? 'X' : 'O';
+
         bool juegoActivo = true;
 
         while (juegoActivo)
         {
-            // Imprimir tablero
             for (int i = 0; i < 6; i++)
             {
                 for (int j = 0; j < 7; j++)
@@ -31,17 +37,17 @@ class Program
             }
             Console.WriteLine("0 1 2 3 4 5 6");
 
-            Console.Write("Jugador " + jugador + ", elige columna (0-6): ");
+            string nombreActual = fichaActual == 'X' ? nombre1 : nombre2;
+            Console.Write(nombreActual + " (" + fichaActual + "), elige columna (0-6): ");
             string entrada = Console.ReadLine();
             int columna = int.Parse(entrada); 
 
-            // Insertar ficha
             bool colocada = false;
             for (int i = 5; i >= 0; i--)
             {
                 if (tablero[i, columna] == '.')
                 {
-                    tablero[i, columna] = jugador;
+                    tablero[i, columna] = fichaActual;
                     colocada = true;
                     break;
                 }
@@ -50,11 +56,10 @@ class Program
             if (!colocada)
             {
                 Console.WriteLine("Columna llena, intenta de nuevo.");
-                continue; // vuelve a pedir columna
+                continue; 
             }
 
-            // Comprobar si ganó
-            if (HayGanador(jugador))
+            if (HayGanador(fichaActual))
             {
                 for (int i = 0; i < 6; i++)
                 {
@@ -64,23 +69,18 @@ class Program
                     }
                     Console.WriteLine();
                 }
-                Console.WriteLine("¡Jugador " + jugador + " gana!");
+                Console.WriteLine("¡" + nombreActual + " gana!");
                 juegoActivo = false;
             }
             else
             {
-                // Cambiar de jugador
-                if (jugador == 'X')
-                    jugador = 'O';
-                else
-                    jugador = 'X';
+                fichaActual = fichaActual == 'X' ? 'O' : 'X';
             }
         }
     }
 
     static bool HayGanador(char j)
     {
-        // Horizontal
         for (int i = 0; i < 6; i++)
         {
             for (int c = 0; c < 4; c++)
@@ -91,7 +91,6 @@ class Program
             }
         }
 
-        // Vertical
         for (int i = 0; i < 3; i++)
         {
             for (int c = 0; c < 7; c++)
@@ -102,7 +101,6 @@ class Program
             }
         }
 
-        // Diagonal derecha
         for (int i = 0; i < 3; i++)
         {
             for (int c = 0; c < 4; c++)
@@ -113,7 +111,6 @@ class Program
             }
         }
 
-        // Diagonal izquierda
         for (int i = 0; i < 3; i++)
         {
             for (int c = 3; c < 7; c++)

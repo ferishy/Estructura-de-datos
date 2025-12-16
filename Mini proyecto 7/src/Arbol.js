@@ -7,7 +7,7 @@ class Arbol {
         this.root = new Node(0, "/", "carpeta");
         this.lastId = 0;
 
-        this.hash = new Map(); 
+        this.hash = new Map();
         this.trie = new Trie();
 
         this.papelera = new Node(-1, "Papelera", "carpeta", "", this.root);
@@ -26,7 +26,6 @@ class Arbol {
         if (!this.hash.has(nodo.nombre))
             this.hash.set(nodo.nombre, []);
         this.hash.get(nodo.nombre).push(nodo);
-
         this.trie.insertar(nodo.nombre, nodo);
     }
 
@@ -39,40 +38,24 @@ class Arbol {
             if (this.hash.get(nodo.nombre).length === 0)
                 this.hash.delete(nodo.nombre);
         }
-
         this.trie.eliminar(nodo.nombre, nodo);
     }
 
-    _actualizarNombreIndices(nodo, viejoNombre, nuevoNombre) {
-        if (this.hash.has(viejoNombre)) {
-            this.hash.set(
-                viejoNombre,
-                this.hash.get(viejoNombre).filter(n => n !== nodo)
-            );
-            if (this.hash.get(viejoNombre).length === 0)
-                this.hash.delete(viejoNombre);
-        }
-        this.trie.eliminar(viejoNombre, nodo);
-
-        if (!this.hash.has(nuevoNombre))
-            this.hash.set(nuevoNombre, []);
-        this.hash.get(nuevoNombre).push(nodo);
-
-        this.trie.insertar(nuevoNombre, nodo);
+    _actualizarNombreIndices(nodo, viejo, nuevo) {
+        this._removerDeIndices(nodo);
+        nodo.nombre = nuevo;
+        this._agregarAIndices(nodo);
     }
 
     buscarPorRuta(ruta) {
         if (ruta === "/") return this.root;
-
-        const partes = ruta.split("/").filter(x => x !== "");
+        const partes = ruta.split("/").filter(Boolean);
         let actual = this.root;
 
         for (const nombre of partes) {
-            const encontrado = actual.children.find(h => h.nombre === nombre);
-            if (!encontrado) return null;
-            actual = encontrado;
+            actual = actual.children.find(h => h.nombre === nombre);
+            if (!actual) return null;
         }
-
         return actual;
     }
 
@@ -88,40 +71,30 @@ class Arbol {
 
     listarHijos(ruta) {
         const nodo = this.buscarPorRuta(ruta);
-        if (!nodo) return null;
-        return nodo.children.map(h => h.nombre);
+        return nodo ? nodo.children.map(h => h.nombre) : null;
     }
 
     obtenerRutaCompleta(nodo) {
-        let actual = nodo;
         const partes = [];
-
-        while (actual.parent) {
-            partes.push(actual.nombre);
-            actual = actual.parent;
+        while (nodo.parent) {
+            partes.push(nodo.nombre);
+            nodo = nodo.parent;
         }
-
         return "/" + partes.reverse().join("/");
     }
 
-    preorden(nodo = this.root, resultado = []) {
-        resultado.push(nodo.nombre);
-        for (const h of nodo.children) {
-            this.preorden(h, resultado);
-        }
-        return resultado;
+    preorden(nodo = this.root, res = []) {
+        res.push(nodo.nombre);
+        nodo.children.forEach(h => this.preorden(h, res));
+        return res;
     }
 
     eliminarConPapelera(ruta) {
         const nodo = this.buscarPorRuta(ruta);
-        if (!nodo || nodo === this.root || nodo === this.papelera)
-            return false;
+        if (!nodo || nodo === this.root || nodo === this.papelera) return false;
 
         nodo._rutaOriginal = this.obtenerRutaCompleta(nodo);
-
-        nodo.parent.children =
-            nodo.parent.children.filter(h => h !== nodo);
-
+        nodo.parent.children = nodo.parent.children.filter(h => h !== nodo);
         nodo.parent = this.papelera;
         this.papelera.children.push(nodo);
         return true;
@@ -131,16 +104,12 @@ class Arbol {
         const nodo = this.papelera.children.find(n => n.nombre === nombre);
         if (!nodo || !nodo._rutaOriginal) return false;
 
-        const partes = nodo._rutaOriginal.split("/").filter(x => x !== "");
+        const partes = nodo._rutaOriginal.split("/").filter(Boolean);
         partes.pop();
-
-        const rutaPadre = "/" + partes.join("/");
-        const padre = rutaPadre === "/" ? this.root : this.buscarPorRuta(rutaPadre);
+        const padre = partes.length === 0 ? this.root : this.buscarPorRuta("/" + partes.join("/"));
         if (!padre) return false;
 
-        this.papelera.children =
-            this.papelera.children.filter(n => n !== nodo);
-
+        this.papelera.children = this.papelera.children.filter(n => n !== nodo);
         nodo.parent = padre;
         padre.children.push(nodo);
         delete nodo._rutaOriginal;
@@ -148,7 +117,7 @@ class Arbol {
     }
 
     vaciarPapelera() {
-        for (const n of [...this.papelera.children]) {
+        for (const n of this.papelera.children) {
             this._removerDeIndices(n);
         }
         this.papelera.children = [];
@@ -162,75 +131,59 @@ class Arbol {
         return this.trie.autocompletar(prefijo);
     }
 
-    renombrar(ruta, nuevoNombre) {
+    renombrar(ruta, nuevo) {
         const nodo = this.buscarPorRuta(ruta);
         if (!nodo || nodo === this.root || nodo === this.papelera) return false;
-
-        const viejoNombre = nodo.nombre;
-        nodo.nombre = nuevoNombre;
-        this._actualizarNombreIndices(nodo, viejoNombre, nuevoNombre);
+        this._actualizarNombreIndices(nodo, nodo.nombre, nuevo);
         return true;
     }
 
-    mover(rutaOrigen, rutaDestino) {
-        const nodo = this.buscarPorRuta(rutaOrigen);
-        const destino = this.buscarPorRuta(rutaDestino);
-
-        if (!nodo || !destino) return false;
-        if (nodo === this.root) return false;
+    mover(origen, destino) {
+        const nodo = this.buscarPorRuta(origen);
+        const dest = this.buscarPorRuta(destino);
+        if (!nodo || !dest || nodo === this.root) return false;
 
         nodo.parent.children = nodo.parent.children.filter(h => h !== nodo);
-        
-        nodo.parent = destino;
-        destino.children.push(nodo);
-
+        nodo.parent = dest;
+        dest.children.push(nodo);
         return true;
     }
 
-    tamaño(nodo = this.root) {
-        let total = 1;
-        for (const h of nodo.children)
-            total += this.tamaño(h);
-        return total;
-    }
-
-    altura(nodo = this.root) {
-        if (nodo.children.length === 0) return 0;
-        return 1 + Math.max(...nodo.children.map(h => this.altura(h)));
-    }
-
-    guardarJSON(rutaArchivo) {
+    guardarJSON(ruta) {
         const data = {
             proyecto: "mini-suite-arboles",
             ultima_id: this.lastId,
             root: this._nodoToJSON(this.root)
         };
-
-        fs.writeFileSync(rutaArchivo, JSON.stringify(data, null, 2));
+        fs.writeFileSync(ruta, JSON.stringify(data, null, 2));
     }
 
     _nodoToJSON(nodo) {
-        return {
+        const json = {
             id: nodo.id,
             nombre: nodo.nombre,
             tipo: nodo.tipo,
             contenido: nodo.contenido,
-            children: nodo.children.map(hijo => this._nodoToJSON(hijo))
+            children: nodo.children.map(h => this._nodoToJSON(h))
         };
+        if (nodo._rutaOriginal) json._rutaOriginal = nodo._rutaOriginal;
+        return json;
     }
 
-    cargarJSON(rutaArchivo) {
-        const data = JSON.parse(fs.readFileSync(rutaArchivo));
+    cargarJSON(ruta) {
+        const data = JSON.parse(fs.readFileSync(ruta));
 
         this.lastId = data.ultima_id;
         this.hash = new Map();
         this.trie = new Trie();
 
         this.root = this._jsonToNodo(data.root, null);
+        this.papelera = this.buscarPorRuta("/Papelera");
     }
 
     _jsonToNodo(obj, parent) {
         const nodo = new Node(obj.id, obj.nombre, obj.tipo, obj.contenido, parent);
+        if (obj._rutaOriginal) nodo._rutaOriginal = obj._rutaOriginal;
 
         this._agregarAIndices(nodo);
         nodo.children = obj.children.map(h => this._jsonToNodo(h, nodo));
@@ -239,3 +192,4 @@ class Arbol {
 }
 
 module.exports = Arbol;
+

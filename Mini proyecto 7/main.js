@@ -5,6 +5,13 @@ const fs = require("fs");
 const arbol = new Arbol();
 let cwd = "/";
 
+function resolverRuta(ruta) {
+    if (!ruta) return null;
+    if (ruta.startsWith("/")) return ruta;
+    if (cwd === "/") return "/" + ruta;
+    return cwd + "/" + ruta;
+}
+
 const rl = readline.createInterface({
     input: process.stdin,
     output: process.stdout,
@@ -53,17 +60,16 @@ exit                  Salir
     },
 
     ls(args) {
-        const ruta = args[0] || cwd;
-        const hijos = arbol.listarHijos(ruta);
-        hijos ? console.log(hijos.join(" ")) :
-            console.log("Ruta no válida");
+    const ruta = args[0] ? resolverRuta(args[0]) : cwd;
+    const hijos = arbol.listarHijos(ruta);
+    hijos ? console.log(hijos.join(" ")) : console.log("Ruta no válida");
     },
 
     cd(args) {
-        if (!args[0]) return;
-        const nueva = args[0] === "/" ? "/" : args[0];
-        if (arbol.buscarPorRuta(nueva)) cwd = nueva;
-        else console.log("Ruta no válida");
+    if (!args[0]) return;
+    const ruta = resolverRuta(args[0]);
+    if (arbol.buscarPorRuta(ruta)) cwd = ruta;
+    else console.log("Ruta no válida");
     },
 
     pwd() {
@@ -71,21 +77,25 @@ exit                  Salir
     },
 
     mv(args) {
-        arbol.mover(args[0], args[1]) ?
-            console.log("Movido correctamente") :
-            console.log("Error al mover");
+    const origen = resolverRuta(args[0]);
+    const destino = resolverRuta(args[1]);
+    arbol.mover(origen, destino) ?
+        console.log("Movido correctamente") :
+        console.log("Error al mover");
     },
 
     rename(args) {
-        arbol.renombrar(args[0], args[1]) ?
-            console.log("Renombrado") :
-            console.log("Error al renombrar");
+    const ruta = resolverRuta(args[0]);
+    arbol.renombrar(ruta, args[1]) ?
+        console.log("Renombrado") :
+        console.log("Error al renombrar");
     },
 
     rm(args) {
-        arbol.eliminarConPapelera(args[0]) ?
-            console.log("Movido a papelera") :
-            console.log("Error al eliminar");
+    const ruta = resolverRuta(args[0]);
+    arbol.eliminarConPapelera(ruta) ?
+        console.log("Movido a papelera") :
+        console.log("Error al eliminar");
     },
 
     trash() {

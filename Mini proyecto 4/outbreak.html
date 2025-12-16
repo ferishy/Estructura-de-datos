@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Contagio</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background-color: #111;
+      color: #0f0;
+    }
+    #juego {
+      display: grid;
+      grid-template-columns: repeat(20, 25px);
+      grid-template-rows: repeat(20, 25px);
+      gap: 1px;
+      margin: 20px auto;
+      width: max-content;
+    }
+    .celda {
+      width: 25px;
+      height: 25px;
+      background-color: #222;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .virus { background-color: red; }
+    .barrera { background-color: gray; }
+    .jugador { background-color: lime; }
+    .salida { background-color: blue; }
+  </style>
+</head>
+<body>
+  <h1>🦠 VIRUS OUTBREAK</h1>
+  <p>
+    Vidas: <span id="vidas">3</span> |
+    Barreras: <span id="contadorBarreras">14</span> |
+    Antídotos: <span id="contadorAntidotos">3</span> |
+    Puntos: <span id="puntos">0</span>
+  </p>
+
+  <div id="juego"></div>
+
+  <script>
+    const tamaño = 20;
+    let tablero = [];
+    let jugador = { x: 0, y: 0 };
+    let salida = { x: tamaño - 1, y: tamaño - 1 };
+
+    let vidas = 3;
+    let barreras = 14;
+    let antidotos = 3;
+    let nivel = 1;
+    let puntosTotales = 0;
+    let turnos = 0;
+
+    const juegoEl = document.getElementById("juego");
+    const vidasEl = document.getElementById("vidas");
+    const barrerasEl = document.getElementById("contadorBarreras");
+    const antidotosEl = document.getElementById("contadorAntidotos");
+    const puntosEl = document.getElementById("puntos");
+
+    // inicializar tablero
+    function iniciarTablero() {
+      tablero = Array.from({ length: tamaño }, () => Array(tamaño).fill("0"));
+
+      tablero[jugador.y][jugador.x] = "J";
+      tablero[salida.y][salida.x] = "S";
+
+      const cantidadVirus = 2 + nivel;
+      for (let i = 0; i < cantidadVirus; i++) {
+        let vx = Math.floor(Math.random() * tamaño);
+        let vy = Math.floor(Math.random() * tamaño);
+        if (tablero[vy][vx] === "0") tablero[vy][vx] = "V";
+      }
+
+      dibujarTablero();
+    }
+
+    // dibujar tablero
+    function dibujarTablero() {
+      juegoEl.innerHTML = "";
+
+      tablero.forEach((fila, y) => {
+        fila.forEach((celda, x) => {
+          const celdaEl = document.createElement("div");
+          celdaEl.classList.add("celda");
+
+          if (celda === "V") celdaEl.classList.add("virus");
+          if (celda === "B") celdaEl.classList.add("barrera");
+          if (celda === "J") celdaEl.classList.add("jugador");
+          if (celda === "S") celdaEl.classList.add("salida");
+
+          celdaEl.onclick = () => alternarBarrera(x, y);
+
+          juegoEl.appendChild(celdaEl);
+        });
+      });
+
+      vidasEl.textContent = vidas;
+      barrerasEl.textContent = barreras;
+      antidotosEl.textContent = antidotos;
+      puntosEl.textContent = puntosTotales;
+    }
+
+    // crear o quitar barreras
+    function alternarBarrera(x, y) {
+      if (tablero[y][x] === "B") {
+        tablero[y][x] = "0";
+        barreras++;
+      } else if (tablero[y][x] === "0" && barreras > 0) {
+        tablero[y][x] = "B";
+        barreras--;
+      }
+      dibujarTablero();
+    }
+
+    // movimiento del jugador
+    function moverJugador(dx, dy) {
+      const nuevoX = jugador.x + dx;
+      const nuevoY = jugador.y + dy;
+
+      // limites
+      if (nuevoX < 0 || nuevoY < 0 || nuevoX >= tamaño || nuevoY >= tamaño) return;
+
+      // barreras o virus bloquean
+      if (tablero[nuevoY][nuevoX] === "B" || tablero[nuevoY][nuevoX] === "V") return;
+
+      tablero[jugador.y][jugador.x] = "0";
+      jugador.x = nuevoX;
+      jugador.y = nuevoY;
+
+      // llego a la salida
+      if (jugador.x === salida.x && jugador.y === salida.y) {
+        calcularPuntaje();
+        siguienteNivel();
+        return;
+      }
+
+      tablero[jugador.y][jugador.x] = "J";
+      turnos++;
+
+      if (turnos % 2 === 0) expandirVirus();
+      dibujarTablero();
+      
+      verificarDerrota();
+    }
+
+    // expansion del virus
+    function expandirVirus() {
+      let nuevoTablero = tablero.map(fila => [...fila]);
+
+      for (let y = 0; y < tamaño; y++) {
+        for (let x = 0; x < tamaño; x++) {
+          if (tablero[y][x] === "V") {
+            const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+
+            dirs.forEach(([dx, dy]) => {
+              const nx = x + dx, ny = y + dy;
+              if (nx >= 0 && ny >= 0 && nx < tamaño && ny < tamaño && tablero[ny][nx] === "0") {
+                nuevoTablero[ny][nx] = "V";
+              }
+            });
+          }
+        }
+      }
+
+      tablero = nuevoTablero;
+    }
+
+    // usar antidoto
+    function usarAntidoto() {
+      if (antidotos <= 0) return;
+      antidotos--;
+
+      for (let y = 0; y < tamaño; y++) {
+        for (let x = 0; x < tamaño; x++) {
+          if (tablero[y][x] === "V") {
+            tablero[y][x] = "0";
+          }
+        }
+      }
+
+      dibujarTablero();
+    }
+
+    // verificacion derrota
+    function verificarDerrota() {
+      let totalVirus = 0;
+
+      for (let y = 0; y < tamaño; y++) {
+        for (let x = 0; x < tamaño; x++) {
+          if (tablero[y][x] === "V") totalVirus++;
+
+          if (tablero[y][x] === "J" && virusCerca(x, y)) {
+            vidas--;
+
+            if (vidas <= 0) {
+              setTimeout(() => {
+                alert("El virus te alcanzó. Juego terminado.");
+              location.reload();
+            }, 50);
+          } else {
+            setTimeout(() => {
+              alert("El virus te alcanzó. Pierdes una vida.");
+              reiniciarNivel();
+            }, 50);
+          }
+          }
+        }
+      }
+
+      if (totalVirus >= tamaño * tamaño - 1) {
+        alert("El virus cubrió todo el tablero. Fin del juego.");
+        location.reload();
+      }
+    }
+
+    function virusCerca(x, y) {
+      const dirs = [
+        [0,1],   
+        [0,-1],  
+        [1,0],   
+        [-1,0]   
+      ];
+
+      return dirs.some(([dx, dy]) => {
+        const nx = x + dx;
+        const ny = y + dy;
+        return nx >= 0 && ny >= 0 && nx < tamaño && ny < tamaño && tablero[ny][nx] === "V";
+     });
+    }
+
+    // puntuacion
+    function calcularPuntaje() {
+      let totalVirus = 0;
+
+      for (let y = 0; y < tamaño; y++) {
+        for (let x = 0; x < tamaño; x++) {
+          if (tablero[y][x] === "V") totalVirus++;
+        }
+      }
+
+      const puntosNivel = Math.max(0, 400 - totalVirus);
+      puntosTotales += puntosNivel;
+
+      alert(`Nivel superado! Puntos del nivel: ${puntosNivel} | Total: ${puntosTotales}`);
+    }
+
+    // siguiente nivel
+    function siguienteNivel() {
+      nivel++;
+      barreras = Math.max(5, 14 - nivel);
+      antidotos = Math.max(1, 3 - Math.floor(nivel / 2));
+
+      jugador = { x: 0, y: 0 };
+      salida = { x: tamaño - 1, y: tamaño - 1 };
+      turnos = 0;
+
+      iniciarTablero();
+    }
+
+    function reiniciarNivel() {
+      jugador = { x: 0, y: 0 };
+      salida = { x: tamaño - 1, y: tamaño - 1 };
+      turnos = 0;
+      iniciarTablero();
+    }
+
+    // controles
+    document.addEventListener("keydown", e => {
+      if (e.key === "ArrowUp") moverJugador(0, -1);
+      if (e.key === "ArrowDown") moverJugador(0, 1);
+      if (e.key === "ArrowLeft") moverJugador(-1, 0);
+      if (e.key === "ArrowRight") moverJugador(1, 0);
+      if (e.key.toLowerCase() === "a") usarAntidoto();
+    });
+
+    iniciarTablero();
+  </script>
+</body>
+</html>
